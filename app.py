@@ -5,66 +5,68 @@ from summarizer import summarize_text, answer_question
 # Page config
 st.set_page_config(page_title="AI Research Assistant", layout="wide")
 
-# Header
 st.title("🧠 AI Research Paper Assistant")
 st.markdown("Search, summarize, and interact with real PubMed research papers using AI")
 
 # Input
-query = st.text_input("🔍 Enter topic (e.g., diabetes, cancer, heart disease)")
+query = st.text_input("🔍 Enter topic (e.g., diabetes, cancer)")
 
 # Button
 if st.button("🚀 Search & Analyze"):
+
     if not query:
         st.warning("Please enter a topic")
+
     else:
-        with st.spinner("Fetching research papers..."):
-            papers = fetch_pubmed(query)
+        papers = fetch_pubmed(query, max_results=3)
+
+        # DEBUG (remove later)
+        st.write("DEBUG:", papers)
 
         if not papers:
             st.error("No papers found")
         else:
-            for i, paper in enumerate(papers, 1):
-                with st.container():
-                    st.markdown(f"## 📄 Paper {i}")
+            for i, paper in enumerate(papers):
 
-                    # Title
-                    st.markdown(f"**Title:** {paper['title']}")
+                st.markdown("---")
+                st.subheader(f"📄 Paper {i+1}")
+                st.write(f"**Title:** {paper['title']}")
 
-                    # Optional link (if added in backend)
-                    if "url" in paper:
-                        st.markdown(f"[🔗 View Full Paper]({paper['url']})")
+                # Abstract
+                abstract = paper.get("abstract", "")
+                if abstract:
+                    with st.expander("📖 View Abstract"):
+                        st.write(abstract)
+                else:
+                    st.warning("No abstract available")
 
-                    # Show abstract toggle
-                    if st.checkbox(f"📖 Show Abstract (Paper {i})"):
-                        st.info(paper["abstract"])
+                # Summary
+                if st.button(f"🧠 Generate Summary {i}", key=f"sum_{i}"):
+                    with st.spinner("Generating summary..."):
+                        summary = summarize_text(abstract)
+                    st.success(summary)
 
-                    # SUMMARY
-                    if paper["abstract"]:
-                        with st.spinner("Generating summary..."):
-                            summary = summarize_text(paper["abstract"])
+                # Q&A
+                st.markdown("### 💬 Ask a Question")
 
-                        st.markdown("### 🔍 Summary")
-                        st.markdown(summary)
+                q_key = f"q_{i}"
+                btn_key = f"btn_{i}"
+
+                # Store question in session
+                if q_key not in st.session_state:
+                    st.session_state[q_key] = ""
+
+                # Input box
+                question = st.text_input(
+                    f"Ask question for Paper {i+1}",
+                    key=q_key
+                )
+
+                # Button
+                if st.button(f"Get Answer for Paper {i+1}", key=btn_key):
+                    if question.strip() == "":
+                        st.warning("Please enter a question")
                     else:
-                        st.warning("No abstract available")
-
-                    # Q&A SECTION
-                    st.markdown("### 💬 Ask a Question")
-
-                    question = st.text_input(
-                        f"Ask something about Paper {i}",
-                        key=f"question_{i}"
-                    )
-
-                    if question:
                         with st.spinner("Thinking..."):
-                            answer = answer_question(
-                                paper["abstract"][:1500],
-                                question
-                            )
-
-                        st.markdown("#### 🤖 Answer")
+                            answer = answer_question(abstract, question)
                         st.success(answer)
-
-                    st.divider()
-                    

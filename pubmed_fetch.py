@@ -1,8 +1,8 @@
 from Bio import Entrez
 
-Entrez.email = "your_email@gmail.com"  # put your email
+Entrez.email = "priyankakuradagi@gmail.com"
 
-def fetch_pubmed(query, max_results=1):
+def fetch_pubmed(query, max_results=3):
     handle = Entrez.esearch(db="pubmed", term=query, retmax=max_results)
     record = Entrez.read(handle)
     ids = record["IdList"]
@@ -10,15 +10,12 @@ def fetch_pubmed(query, max_results=1):
     papers = []
 
     for pubmed_id in ids:
-        fetch = Entrez.efetch(db="pubmed", id=pubmed_id, retmode="xml")
-        data = Entrez.read(fetch)
+        handle = Entrez.efetch(db="pubmed", id=pubmed_id, rettype="abstract", retmode="text")
+        data = handle.read()
 
-        article = data['PubmedArticle'][0]['MedlineCitation']['Article']
-        title = article.get('ArticleTitle', '')
-
-        abstract = ""
-        if 'Abstract' in article:
-            abstract = " ".join(article['Abstract']['AbstractText'])
+        lines = data.split("\n")
+        title = lines[0] if lines else "No title"
+        abstract = " ".join(lines[1:]) if len(lines) > 1 else "No abstract available"
 
         papers.append({
             "title": title,
